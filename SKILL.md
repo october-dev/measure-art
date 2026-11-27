@@ -1,6 +1,6 @@
 ---
 name: measure-art
-description: Count creative and CAD files locally - Figma, Blender, Unity/Unreal/Godot projects, FBX and other 3D, Photoshop, Illustrator, After Effects, Canva exports, SketchUp, AutoCAD, SolidWorks and other CAD - and write counts only (files by application, native vs export, distinct works, engine projects, sizes, dates, format versions, duplicates, plus Wwise and FMOD projects, localisation and narrative files, engine content counts, template and Asset Store content, pre-2025 and pre-ChatGPT shares, labels on every number and restriction flags) into measure.json + report.md, ending with a short, clearly labelled "Why this is special" pitch written after the audit (dream mode, on by default, --no-dream skips it). Full mode is the default; simple mode (optional) is a fast listing pass, used only when the user asks for a quick look. Use when the user asks to "count our art/design/3D/CAD files", "inventory creative assets", "how many Blender/PSD/Unity files do we have", or to prepare inputs for master-valuate. Never emits file names or content.
+description: Count creative and CAD files locally - Figma, Blender, Unity/Unreal/Godot projects, FBX and other 3D, Photoshop, Illustrator, After Effects, Canva exports, SketchUp, AutoCAD, SolidWorks and other CAD - and write counts only (files by application, native vs export, distinct works, engine projects, sizes, dates, format versions, duplicates, plus Wwise and FMOD projects, localisation and narrative files, engine content counts, template and Asset Store content, pre-2025 and pre-ChatGPT shares, labels on every number and restriction flags) into measure.json + report.md, ending with a short, clearly labelled "Why this is special" pitch written after the audit (dream mode, on by default, --no-dream skips it). Full mode is the default; simple mode (optional) is a fast listing pass, used only when the user asks for a quick look. Use when the user asks to "count our art/design/3D/CAD files", "inventory creative assets", "how many Blender/PSD/Unity files do we have", or to prepare inputs for a studio overview. Never emits file names or content.
 ---
 
 # measure-art
@@ -12,7 +12,7 @@ Inventories creative working files **on this machine**. The script walks folders
 | mode | what runs | time |
 |---|---|---|
 | `--mode simple` (optional) | directory listing and file metadata only (size, modification time, extension, folder grouping). No header reads, no hashing, no zip listing. Ends with a **full-run recommendation**. | minutes, even on large disks |
-| `--mode full` (default) | adds header probes (format versions, STEP and XMP dates, XMP creators and tools, Canva detection), zip member listing, duplicate detection and fingerprints for master-valuate | longer; about one file header per file |
+| `--mode full` (default) | adds header probes (format versions, STEP and XMP dates, XMP creators and tools, Canva detection), zip member listing, duplicate detection and fingerprints for de-duplication | longer; about one file header per file |
 
 ## Steps
 
@@ -32,7 +32,7 @@ Inventories creative working files **on this machine**. The script walks folders
    - **Same privacy rules as everything else**: no file or folder names, paths, people's names (XMP creators included), emails, URLs or secrets. Describe the product or genre in general terms.
    - Save it in a draft text file outside the roots, then run `python3 <skill-dir>/scripts/add_dream.py draft.txt --out <out-dir> [--deny "<a name you saw>" ...]`. It checks that the paragraph is not empty, has 4 to 6 sentences and no more than 160 words, holds no email, URL, handle, path, file name, token or denied name, and that every number in it appears in the report or `measure.json`. It warns about superlatives. Then it writes the `dream` block into `measure.json` and adds the **Why this is special** section at the very end of `report.md`, labelled as a pitch and kept apart from the counts. If it refuses, fix what it names and run it again: never loosen a fact to get past a check. `--check` validates without writing. Re-runs keep the paragraph and check it again. Delete the draft afterwards.
 5. **Review with the user.** Read `report.md` together, including the pitch. Check that the application mix matches what the user expects, and that `native_files` is not near zero (exports alone are worth much less to buyers). Check whether `duplicate_files` points at backups of backups.
-6. **Hand off.** `measure.json` goes to **master-valuate**. Delete `.state/` before sharing.
+6. **Hand off.** Send `measure.json` to whoever is assembling the overview. Delete `.state/` before sharing.
 
 ## What is counted
 

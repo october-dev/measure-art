@@ -2,7 +2,7 @@
 
 An agent skill for Claude Code, Codex, Grok, Hermes and other coding agents that counts creative and CAD files **on your own machine**: files by application, native working files versus exports, distinct works, engine projects, sizes, dates, format versions and duplicates. It never writes a file name or any content. It ends with a short, clearly labelled **"Why this is special"** pitch that the agent writes after the audit (dream mode).
 
-Part of the October measurement skills: [measure-code](https://github.com/october-dev/measure-code) · [measure-data](https://github.com/october-dev/measure-data) · **measure-art** · [master-valuate](https://github.com/october-dev/master-valuate)
+Part of the October measurement skills: [measure-code](https://github.com/october-dev/measure-code) · [measure-data](https://github.com/october-dev/measure-data) · **measure-art** · [measure-disk](https://github.com/october-dev/measure-disk) · [measure-studio](https://github.com/october-dev/measure-studio)
 
 ## Install
 
@@ -52,7 +52,7 @@ See [`examples/`](examples/) for output built from **synthetic** data.
 
 ## What a full run adds
 
-Format versions from headers, internal dates (STEP and XMP), XMP creators (hashed) and authoring tools, Canva detection, creative files inside zips (from the member index, never extracted), duplicates, and fingerprints for dedupe in master-valuate. It also reports distinct designs with the share that keeps a native file, and the CAD and render byte shares.
+Format versions from headers, internal dates (STEP and XMP), XMP creators (hashed) and authoring tools, Canva detection, creative files inside zips (from the member index, never extracted), duplicates, and fingerprints for de-duplication. It also reports distinct designs with the share that keeps a native file, and the CAD and render byte shares.
 
 ## Studio content, cutoffs, labels and restrictions
 
@@ -80,7 +80,7 @@ To add a format, add one line to the `APPS` table at the top of `scripts/measure
 - Only header bytes are read (format magic, version fields, PDF producer). Content is never stored.
 - Never emitted: file or folder names, paths, layer names, text.
 - Cloud placeholders are not read, so no download is triggered.
-- Fingerprints are hashes of file size plus head and tail bytes, kept as a bottom-k sketch. They let master-valuate find overlapping backups.
+- Fingerprints are hashes of file size plus head and tail bytes, kept as a bottom-k sketch. They let overlapping backups be found.
 
 ## Test
 
