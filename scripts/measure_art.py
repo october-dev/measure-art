@@ -2,7 +2,7 @@
 """measure-art: count creative and CAD files locally. Counts only, never content.
 
 Usage:
-  measure_art.py <root> [<root> ...] --out DIR [--label NAME] [--tag K:V] [--cutoff 2025-01-01] [--force]
+  measure_art.py <root> [<root> ...] --out DIR [--label NAME] [--tag K:V] [--cutoff 2025-01-01] [--force] [--no-dream]
 
 Walks the given folders (disks, shares, synced folders) and writes:
   measure.json  schema october.measure/v1, kind "art"
@@ -19,6 +19,10 @@ What it never writes: file or folder names, paths, layer names, text, or
 image content. Only a few header bytes are read to identify formats and
 versions. Progress is checkpointed per top-level folder in <out>/.state so an
 interrupted run resumes.
+
+Dream mode: after the audit the agent writes a short "Why this is special" pitch
+with add_dream.py. It lands in the `dream` block of measure.json and in the last
+section of report.md, labelled and kept apart from the counts. --no-dream skips it.
 
 Python 3.9+ standard library only. No network calls.
 """
@@ -38,7 +42,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 TOOL = "measure-art"
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 SCHEMA = "october.measure/v1"
 SKETCH_K = 256
 
@@ -551,7 +555,22 @@ def render(d: dict) -> str:
           "- Canva exports are detected from PDF/PNG metadata and Canva's default file naming, so some will be missed.",
           "- Engine caches (Library, Intermediate, ...) are skipped; `.meta` sidecar files are not counted.",
           f"- Other files not counted as creative: {fmt(t['other_files'])} ({human_bytes(t['other_bytes'])}).", ""]
+    L += dream_mod().section(d.get("dream"))
     return "\n".join(L)
+
+
+def dream_mod():
+    """add_dream.py next to this script: the "Why this is special" slot, its validation and its report section."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("add_dream", Path(__file__).resolve().parent / "add_dream.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def privacy_problems(doc: dict) -> bool:
+    """True when an email address or an absolute path made it into the document."""
+    return bool(re.search(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}|/(Users|home|Volumes)/", json.dumps(doc)))
 
 
 def main(argv=None) -> int:
@@ -564,6 +583,7 @@ def main(argv=None) -> int:
     ap.add_argument("--mode", choices=["simple", "full"], default="full",
                     help="simple = listing and file metadata only, no header reads or hashing (recommended first run); full = default")
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--no-dream", action="store_true", help="skip dream mode: no 'Why this is special' pitch after the audit")
     a = ap.parse_args(argv)
     OPTS.simple = a.mode == "simple"
     out = a.out.expanduser().resolve()
@@ -605,8 +625,10 @@ def main(argv=None) -> int:
     merged = merge(list(done.values()))
     doc = build_doc(merged, a.label, a.tag, a.cutoff, len(roots), a.mode)
     doc["recommendation"] = recommend(doc)
-    text = json.dumps(doc)
-    if re.search(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}|/(Users|home|Volumes)/", text):
+    dm = dream_mod()
+    doc["dream"] = dm.pending()
+    doc["dream"] = dm.resolve(out, dm.ground_text(doc, render(doc)), a.no_dream)
+    if privacy_problems(doc):
         log("privacy check FAILED, nothing written")
         return 2
     atomic_write(out / "measure.json", json.dumps(doc, indent=2))

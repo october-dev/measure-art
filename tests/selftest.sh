@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds a synthetic creative-files tree, measures it and checks the output.
+# Builds a synthetic creative-files tree, measures it and checks the output and dream mode.
 set -euo pipefail
 PY="${PY:-python3}"
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
@@ -52,5 +52,46 @@ assert sm["format_versions"] == {} and sm["fingerprints"]["file_sketch"] == [] a
 text = open(sys.argv[1]).read() + open(sys.argv[2]).read() + open(sys.argv[3]).read()
 for leak in ("zq", "Zq", "Untitled", "Artist"):
     assert leak not in text, leak
-print("selftest: passed")
+print("selftest: counts OK")
 EOF
+# Dream mode: validate and insert "Why this is special", keep it on re-runs, refuse bad drafts, honour --no-dream.
+D="$HERE/scripts/add_dream.py"
+cat > "$WORK/dream.txt" <<'EOF'
+This small disk already looks like a real game studio at work. Character models, painted posters and a Unity 2022.3 project
+sit together, so the art was made to ship. The Blender work kept 2 native files for one character, which shows real iteration.
+There is even CAD for a physical part, and every file stays counted, never shown.
+EOF
+"$PY" "$D" "$WORK/dream.txt" --out "$OUT" --check 2>/dev/null
+"$PY" "$D" "$WORK/dream.txt" --out "$OUT" --deny "Zq Artist" >/dev/null 2>&1
+"$PY" "$HERE/scripts/measure_art.py" "$R" --out "$OUT" --label demo-art 2>/dev/null   # a re-run keeps it
+refuse() {
+  printf '%s\n' "$2" > "$WORK/bad.txt"
+  if "$PY" "$D" "$WORK/bad.txt" --out "$OUT" --deny "Zq Artist" --check 2>/dev/null; then echo "dream accepted: $1"; exit 1; fi
+}
+refuse empty ""
+refuse too-short "Nice art. Real craft."
+refuse file-name "It has 2 Blender files. The hero lives in zqhero_v2_final.blend now. It is polished. It ships."
+refuse path "It has 2 Blender files. The hero sits in ZqCharacters/hero/ today. It is polished. It ships."
+refuse name "It has 2 Blender files. Zq Artist painted every poster. It is polished. It ships."
+refuse email "It has 2 Blender files. Write to art@example.com for more. It is polished. It ships."
+refuse invented-number "It has 2 Blender files. It took 40,000 hours to make. It is polished. It ships."
+"$PY" "$HERE/scripts/measure_art.py" "$R" --out "$WORK/nodream" --label demo-art --no-dream 2>/dev/null
+cp -R "$OUT" "$WORK/declined" && "$PY" "$D" --no-dream --out "$WORK/declined" >/dev/null 2>&1
+"$PY" "$D" "$HERE/examples/studio-nas-art/dream.txt" --out "$HERE/examples/studio-nas-art" --check 2>/dev/null
+"$PY" - "$WORK" <<'EOF'
+import json, sys, pathlib
+w = pathlib.Path(sys.argv[1])
+d = json.loads((w / "out/measure.json").read_text()); rep = (w / "out/report.md").read_text()
+dr = d["dream"]
+assert dr["status"] == "written" and dr["title"] == "Why this is special" and dr["sentences"] == 4, dr
+assert rep.rstrip().endswith("never shown.") and rep.index("## Why this is special") > rep.index("## 6. Caveats"), rep[-400:]
+for leak in ("zq", "Zq", "Artist"):
+    assert leak not in rep and leak not in json.dumps(d), leak
+assert json.loads((w / "simple/measure.json").read_text())["dream"]["status"] == "pending"
+nd = json.loads((w / "nodream/measure.json").read_text())
+assert nd["dream"]["status"] == "skipped" and "Why this is special" not in (w / "nodream/report.md").read_text()
+dc = json.loads((w / "declined/measure.json").read_text())
+assert dc["dream"]["status"] == "skipped" and "Why this is special" not in (w / "declined/report.md").read_text()
+print("selftest: dream mode OK")
+EOF
+echo "selftest: passed"

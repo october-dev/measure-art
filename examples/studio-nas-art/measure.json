@@ -2,7 +2,7 @@
   "schema": "october.measure/v1",
   "kind": "art",
   "tool": "measure-art",
-  "tool_version": "0.2.0",
+  "tool_version": "0.3.0",
   "mode": "full",
   "measured_at": "2026-11-20T10:00:00Z",
   "zip_contents": {
@@ -474,5 +474,14 @@
     "names": "not emitted",
     "paths": "not emitted",
     "content": "headers only, never stored"
+  },
+  "dream": {
+    "title": "Why this is special",
+    "status": "written",
+    "text": "This is the working library of a studio that keeps its sources, not just a folder of finished pictures. There are 11,125 native working files behind 5,000 distinct works, and 62.0% of designs still have their editable file. Painted art, 3D models and motion work sit alongside 9,200 textures inside 2 Unity projects, so this art was made to ship in games. It spans 2017 to 2024, all of it made before 2025, which makes it years of hand-made craft.",
+    "sentences": 4,
+    "words": 80,
+    "skip_reason": null,
+    "basis": "Founder-style pitch written by the AI agent after the audit, grounded only in what this run inspected. It is not a measurement and changes no count."
   }
 }

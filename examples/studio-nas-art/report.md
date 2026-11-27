@@ -1,6 +1,6 @@
 # Creative file measurement: studio-nas-art
 
-Measured 2026-11-20 with measure-art 0.2.0. Counts only: no file names, paths or content.
+Measured 2026-11-20 with measure-art 0.3.0. Counts only: no file names, paths or content.
 
 ## 1. Headline
 
@@ -68,3 +68,9 @@ Internal dates written by the authoring tool (STEP headers):
 - Canva exports are detected from PDF/PNG metadata and Canva's default file naming, so some will be missed.
 - Engine caches (Library, Intermediate, ...) are skipped; `.meta` sidecar files are not counted.
 - Other files not counted as creative: 5,200 (8.4 GB).
+
+## Why this is special
+
+_Founder-style pitch written by the AI agent after the audit, from what it inspected in this run. It is not a measurement and changes no count above._
+
+This is the working library of a studio that keeps its sources, not just a folder of finished pictures. There are 11,125 native working files behind 5,000 distinct works, and 62.0% of designs still have their editable file. Painted art, 3D models and motion work sit alongside 9,200 textures inside 2 Unity projects, so this art was made to ship in games. It spans 2017 to 2024, all of it made before 2025, which makes it years of hand-made craft.
