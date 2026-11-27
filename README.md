@@ -25,7 +25,7 @@ The commands below use `$SKILL` for the folder you cloned into, for example `SKI
 
 ## Use
 
-**Start with simple mode** (`--mode simple`): a listing-only pass that takes minutes and says whether a full run is worth it.
+Full mode is the default. **Simple mode (optional):** a fast listing pass (`--mode simple`), used only when asked to do a quick look; the agent does not pick it unless you ask.
 
 In your coding agent (Claude Code, Codex, Grok, Hermes ...):
 
@@ -53,6 +53,10 @@ See [`examples/`](examples/) for output built from **synthetic** data.
 ## What a full run adds
 
 Format versions from headers, internal dates (STEP and XMP), XMP creators (hashed) and authoring tools, Canva detection, creative files inside zips (from the member index, never extracted), duplicates, and fingerprints for dedupe in master-valuate. It also reports distinct designs with the share that keeps a native file, and the CAD and render byte shares.
+
+## Studio content, cutoffs, labels and restrictions
+
+Both modes also report Wwise and FMOD projects and sound banks, localisation and narrative files (`.po`, `.xliff`, `.ink`, `.yarn`, articy exports ...), engine content counts (`.uasset`, `.umap`, `.unity`, `.prefab`, `.tscn`), template content (`StarterContent`, `Megascans` ...) and Asset Store or Marketplace files; the share of files dated before 2025 and before ChatGPT (`--cutoff-early`, default 2022-11-30); a label on every material number (`verified`, `estimated`, `self_reported`, `unknown`, `not_applicable`); and restriction flags with ownership (default `own`; `--flag NAME[=no]` and `--ownership` record what the owner says). Blueprints and Blueprint nodes are counted by [measure-code](https://github.com/october-dev/measure-code).
 
 ## Dream mode: "Why this is special"
 
@@ -84,7 +88,7 @@ To add a format, add one line to the `APPS` table at the top of `scripts/measure
 bash tests/selftest.sh
 ```
 
-It builds a synthetic creative-files tree, checks the counts and that no name leaks, and covers dream mode: insert, validation, re-runs and `--no-dream`.
+It builds synthetic creative-files trees, checks the counts and that no name leaks, and covers audio middleware, localisation, engine content, template and Asset Store content, both cutoffs, labels, restriction flags and dream mode (insert, validation, re-runs and `--no-dream`). It passes on Python 3.9 and later (`PY=/usr/bin/python3 bash tests/selftest.sh`).
 
 ## License
 

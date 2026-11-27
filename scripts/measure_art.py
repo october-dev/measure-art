@@ -42,7 +42,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 TOOL = "measure-art"
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 SCHEMA = "october.measure/v1"
 SKETCH_K = 256
 
@@ -90,6 +90,8 @@ APPS = {
     "Video export": {".mp4": "export", ".mov": "export", ".webm": "export", ".avi": "export", ".mkv": "export",
                      ".m4v": "export"},
     "PDF export": {".pdf": "export"},
+    "Wwise": {".wproj": "native", ".wwu": "native", ".bnk": "export"},
+    "FMOD": {".fspro": "native", ".bank": "export"},
     "Audio": {".wav": "export", ".mp3": "export", ".ogg": "export", ".flac": "export", ".aif": "export",
               ".aiff": "export"},
     "Font": {".ttf": "export", ".otf": "export"},
@@ -108,6 +110,15 @@ XMP_DATE = re.compile(rb"xmp:CreateDate(?:>|=\")(\d{4})-(\d{2})")
 XMP_CREATOR = re.compile(rb"<dc:creator>\s*<rdf:Seq>\s*<rdf:li[^>]*>([^<]{1,200})</rdf:li>")
 XMP_TOOL = re.compile(rb"xmp:CreatorTool(?:>|=\")(Adobe (?:Photoshop|Illustrator|After Effects|InDesign|Premiere Pro)(?: CC)?(?: \d{2,4}(?:\.\d)?)?)")
 DESIGN_ROLES = {"native", "export"}
+LOC_EXTS = {".po", ".pot", ".xliff", ".xlf", ".ink", ".yarn", ".arb", ".strings", ".stringsdict", ".resx", ".loc", ".locres"}
+ENGINE_CONTENT_EXTS = (".uasset", ".umap", ".unity", ".prefab", ".tscn")
+TEMPLATE_DIRS = {"StarterContent", "ThirdPerson", "ThirdPersonBP", "FirstPerson", "FirstPersonBP", "Mannequin", "Mannequins",
+                 "LevelPrototyping", "Megascans", "MSPresets", "TopDown", "TopDownBP", "VehicleTemplate"}
+ASSET_STORE_DIRS = {"AssetStoreTools", "Standard Assets", "TextMesh Pro"}
+RESTRICTION_FLAGS = ("client_owned", "platform_nda", "third_party_middleware", "player_personal_data",
+                     "staff_personal_data", "secrets")
+PLATFORM_DIRS = {"ps4", "ps5", "orbis", "prospero", "xboxone", "xboxseries", "scarlett", "gdk", "gamecore", "xdk", "switch",
+                 "nintendoswitch", "nnsdk"}
 NOT_DESIGN_APPS = {"Audio", "Font"}
 RENDER_APPS = {"Image export", "Video export", "Canva export", "PDF export"}
 
@@ -257,10 +268,10 @@ def new_unit() -> dict:
             "internal_years": Counter(), "canva": 0, "folders_with_native": set(), "exports_with_native": 0,
             "bytes_total": 0, "files_total": 0, "other_files": 0, "other_bytes": 0, "megapixels": [],
             "designs": set(), "designs_native": set(), "creator_months": {}, "creators": set(), "tools": Counter(),
-            "zip": Counter(), "zip_apps": Counter()}
+            "zip": Counter(), "zip_apps": Counter(), "pre_early": 0, "studio": Counter()}
 
 
-def scan_unit(top: Path, cutoff: dt.datetime, shallow: bool = False) -> dict:
+def scan_unit(top: Path, cutoff: dt.datetime, shallow: bool = False, cutoff_early: dt.datetime | None = None) -> dict:
     u = new_unit()
     seen = set()
     natives_by_folder = defaultdict(set)   # folder -> work keys of native files
@@ -274,6 +285,11 @@ def scan_unit(top: Path, cutoff: dt.datetime, shallow: bool = False) -> dict:
         walker = os.walk(top)
     for root, dirs, files in walker:
         rp = Path(root)
+        segs = set(rp.parts)
+        in_template = bool(segs & TEMPLATE_DIRS)
+        in_store = bool(segs & ASSET_STORE_DIRS) or ("Plugins" in segs and "Assets" in segs) or "Marketplace" in segs
+        if isinstance(dirs, list):
+            u["studio"]["platform_folders"] += sum(1 for d in dirs if d.lower() in PLATFORM_DIRS)
         if isinstance(dirs, list) and dirs:
             names = set(dirs) | set(files)
             if {"Assets", "ProjectSettings"} <= names:
@@ -305,6 +321,22 @@ def scan_unit(top: Path, cutoff: dt.datetime, shallow: bool = False) -> dict:
             u["bytes_total"] += size
             ext = "." + name.rsplit(".", 1)[-1].lower() if "." in name else ""
             app_role = EXT.get(ext)
+            sc = u["studio"]
+            if ext in LOC_EXTS or "articy" in name.lower():
+                sc["loc_" + (ext[1:] if ext in LOC_EXTS else "articy")] += 1
+            if ext in ENGINE_CONTENT_EXTS:
+                sc["engine_" + ext[1:]] += 1
+            if ext == ".unitypackage":
+                sc["asset_store_packages"] += 1
+            if ext in (".wproj", ".fspro"):
+                sc["wwise_projects" if ext == ".wproj" else "fmod_projects"] += 1
+            if ext in (".bnk", ".bank"):
+                sc["sound_banks"] += 1
+            if app_role is not None:
+                if in_template:
+                    sc["template_content_files"] += 1
+                if in_store:
+                    sc["asset_store_or_marketplace_files"] += 1
             if app_role is None:
                 u["other_files"] += 1
                 u["other_bytes"] += size
@@ -343,6 +375,8 @@ def scan_unit(top: Path, cutoff: dt.datetime, shallow: bool = False) -> dict:
                 u["first"] = iso if u["first"] is None or iso < u["first"] else u["first"]
                 u["last"] = iso if u["last"] is None or iso > u["last"] else u["last"]
                 u["pre"] += when < cutoff
+                if cutoff_early is not None:
+                    u["pre_early"] += when < cutoff_early
             folder = h(str(rp), 12)
             wk = work_key(name)
             if role in DESIGN_ROLES and app not in NOT_DESIGN_APPS:
@@ -380,7 +414,7 @@ def scan_unit(top: Path, cutoff: dt.datetime, shallow: bool = False) -> dict:
     for k in ("designs", "designs_native", "creators"):
         u[k] = sorted(u[k])
     u["creator_months"] = {k: sorted(v) for k, v in u["creator_months"].items()}
-    for k in ("tools", "zip", "zip_apps"):
+    for k in ("tools", "zip", "zip_apps", "studio"):
         u[k] = dict(u[k])
     for a in u["apps"].values():
         a["roles"] = dict(a["roles"])
@@ -402,6 +436,8 @@ def merge(units: list) -> dict:
             t = m["apps"].setdefault(app, {"files": 0, "bytes": 0, "roles": Counter()})
             t["files"] += a["files"]; t["bytes"] += a["bytes"]; t["roles"].update(a["roles"])
         m["years"].update(u["years"]); m["versions"].update(u["versions"]); m["internal_years"].update(u["internal_years"])
+        m["studio"].update(u.get("studio", {}))
+        m["pre_early"] += u.get("pre_early", 0)
         for k in ("pre", "dated", "dups", "dup_bytes", "placeholders", "unreadable", "canva", "exports_with_native",
                   "bytes_total", "files_total", "other_files", "other_bytes", "folders_with_native"):
             m[k] += u[k]
@@ -491,6 +527,77 @@ def build_doc(m: dict, label: str, tags: list, cutoff: str, roots: int, mode: st
     }
 
 
+def flag(value, label, method=None, count=None) -> dict:
+    out = {"value": value, "label": label}
+    if method:
+        out["method"] = method
+    if count is not None:
+        out["count"] = count
+    return out
+
+
+def add_studio_blocks(doc: dict, m: dict, cutoff_early: str, self_flags: dict, ownership: str | None) -> dict:
+    """Labels, both cutoffs, studio content counts (audio middleware, localisation, engine content) and restriction
+    flags. Counts only; unknown is null, never zero."""
+    simple = doc.get("mode") == "simple"
+    sc, t = Counter(m.get("studio") or {}), doc["totals"]
+    dated = sum(m["years"].values())
+    doc["cutoff_early"] = cutoff_early
+    doc["cutoffs"] = {
+        "pre_2025": {"date": doc["cutoff"], "count": m["pre"], "share": doc["pre_cutoff_share"],
+                     "label": "estimated" if dated else "unknown", "unit": "creative files (modification time)"},
+        "pre_chatgpt": {"date": cutoff_early, "count": m.get("pre_early", 0) if dated else None,
+                        "share": round(m.get("pre_early", 0) / dated, 3) if dated else None,
+                        "label": "estimated" if dated else "unknown", "unit": "creative files (modification time)"},
+    }
+    doc["pre_chatgpt_share"] = doc["cutoffs"]["pre_chatgpt"]["share"]
+    loc = {k[4:]: v for k, v in sorted(sc.items()) if k.startswith("loc_")}
+    doc["studio_content"] = {
+        "audio_middleware": {"wwise_projects": sc.get("wwise_projects", 0), "fmod_projects": sc.get("fmod_projects", 0),
+                             "sound_banks": sc.get("sound_banks", 0)},
+        "localisation": {"files": sum(loc.values()), "by_format": loc},
+        "engine_content": {e[1:]: sc.get("engine_" + e[1:], 0) for e in ENGINE_CONTENT_EXTS},
+        "template_content_files": sc.get("template_content_files", 0),
+        "asset_store_or_marketplace_files": sc.get("asset_store_or_marketplace_files", 0),
+        "asset_store_packages": sc.get("asset_store_packages", 0),
+        "blueprints": None, "blueprint_nodes": None, "blueprints_label": "not_applicable",
+        "blueprints_note": "Blueprints and Blueprint nodes are counted by measure-code (count_blueprints.py) on the Unreal project",
+        "label": "verified", "method": "file extensions and folder names; contents are not opened",
+    }
+    third = sc.get("asset_store_packages", 0) + sc.get("asset_store_or_marketplace_files", 0) + sc.get("template_content_files", 0)
+    plat = sc.get("platform_folders", 0)
+    flags = {
+        "client_owned": flag(None, "unknown", "ownership is a contract question; set --ownership or --flag client_owned"),
+        "platform_nda": (flag(True, "estimated", "console-platform folder names found", plat) if plat else
+                         flag(None, "unknown", "no console-platform folder names found; not proof of absence")),
+        "third_party_middleware": (flag(True, "verified", "Asset Store, Marketplace or template content files found", third) if third else
+                                   flag(False, "estimated", "no Asset Store, Marketplace or template content folders found")),
+        "player_personal_data": flag(None, "unknown", "creative files are not read"),
+        "staff_personal_data": flag(None, "unknown", "XMP creator names are hashed, never written"),
+        "secrets": flag(None, "unknown", "creative files are not scanned for secrets"),
+    }
+    for k, v in self_flags.items():
+        flags[k] = flag(v, "self_reported", "stated by the seller")
+    doc["restrictions"] = {"ownership": ownership or "own",
+                           "ownership_basis": "self_reported" if ownership else "default (the seller owns its data)", "flags": flags}
+    lab = "estimated" if simple else "verified"
+    meth = "listing and file metadata only (simple mode)" if simple else None
+    L = {}
+    for path in ("totals.creative_files", "totals.native_files", "totals.export_files", "totals.engine_asset_files",
+                 "totals.creative_bytes", "totals.cad_files", "totals.engine_projects"):
+        L[path] = {"label": lab, **({"method": meth} if meth else {"scope": "files under the scanned roots"})}
+    L["totals.distinct_works"] = {"label": "estimated", "method": "native files grouped by name without version suffixes per folder"}
+    L["totals.duplicate_files"] = ({"label": "verified", "scope": "same size and head/tail bytes"} if not simple else
+                                   {"label": "unknown", "method": "not checked in simple mode"})
+    L["authors.distinct_creators_in_metadata"] = {"label": "estimated" if not simple else "unknown",
+                                                  "method": "XMP creators only; many files carry none" if not simple else "not read in simple mode"}
+    for k in ("pre_2025", "pre_chatgpt"):
+        L["cutoffs." + k] = {"label": doc["cutoffs"][k]["label"], "method": "file modification times, which copies can reset"}
+    L["studio_content.blueprints"] = {"label": "not_applicable", "method": "counted by measure-code on the Unreal project"}
+    doc["labels"] = L
+    return doc
+
+
 def human_bytes(n) -> str:
     if not n:
         return "0 B"
@@ -549,6 +656,23 @@ def render(d: dict) -> str:
     if d["internal_dates_by_year"]:
         L += ["", "Internal dates written by the authoring tool (STEP headers):", ""]
         L += [f"- {y}: {fmt(n)}" for y, n in d["internal_dates_by_year"].items()]
+    sc = d.get("studio_content")
+    if sc:
+        am, lc, ec = sc["audio_middleware"], sc["localisation"], sc["engine_content"]
+        L += ["", "## 5b. Studio content, cutoffs and restrictions", "",
+              f"- Audio middleware: {fmt(am['wwise_projects'])} Wwise and {fmt(am['fmod_projects'])} FMOD project files, "
+              f"{fmt(am['sound_banks'])} sound banks",
+              f"- Localisation and narrative files: {fmt(lc['files'])}" + (" (" + ", ".join(f"{k} {fmt(v)}" for k, v in lc["by_format"].items()) + ")" if lc["by_format"] else ""),
+              "- Engine content: " + ", ".join(f"{k} {fmt(v)}" for k, v in ec.items()) + "; Blueprints are counted by measure-code",
+              f"- Template content files {fmt(sc['template_content_files'])}; Asset Store or Marketplace files "
+              f"{fmt(sc['asset_store_or_marketplace_files'])}; .unitypackage files {fmt(sc['asset_store_packages'])} (third-party, excluded from own work)",
+              f"- Pre-2025: {fmt(d['cutoffs']['pre_2025']['share'])}; pre-ChatGPT (before {d['cutoffs']['pre_chatgpt']['date']}): "
+              f"{fmt(d['cutoffs']['pre_chatgpt']['share'])} of dated files (modification times, label {d['cutoffs']['pre_chatgpt']['label']})", "",
+              f"Ownership: {d['restrictions']['ownership']}; basis: {d['restrictions']['ownership_basis']}. Restriction flags (recorded, not ruled on):", "",
+              "| flag | value | label | basis |", "|---|---|---|---|"]
+        for k, v in d["restrictions"]["flags"].items():
+            val = "unknown" if v["value"] is None else ("yes" if v["value"] else "no")
+            L.append(f"| {k.replace('_', ' ')} | {val}{' (' + fmt(v['count']) + ')' if v.get('count') else ''} | {v['label']} | {v.get('method', '')} |")
     L += ["", "## 6. Caveats", "",
           "- Distinct works group files whose names differ only by version suffixes (v2, final, copy, dates) in the same folder.",
           "- File modification times can be reset by copies and syncs. Treat them as a lower bound on age.",
@@ -580,15 +704,28 @@ def main(argv=None) -> int:
     ap.add_argument("--label", default="art")
     ap.add_argument("--tag", action="append", default=[])
     ap.add_argument("--cutoff", default="2025-01-01")
+    ap.add_argument("--cutoff-early", default="2022-11-30", help="second cutoff for pre-ChatGPT shares (default 2022-11-30)")
+    ap.add_argument("--flag", action="append", default=[], metavar="NAME[=no]",
+                    help="self-reported restriction flag: " + ", ".join(RESTRICTION_FLAGS) + " (repeatable)")
+    ap.add_argument("--ownership", choices=["own", "client_owned", "unclear"], help="self-reported ownership (default own)")
     ap.add_argument("--mode", choices=["simple", "full"], default="full",
-                    help="simple = listing and file metadata only, no header reads or hashing (recommended first run); full = default")
+                    help="full = default; simple (optional) = a fast listing pass with no header reads or hashing, used only when asked to do a quick look")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--no-dream", action="store_true", help="skip dream mode: no 'Why this is special' pitch after the audit")
     a = ap.parse_args(argv)
     OPTS.simple = a.mode == "simple"
+    self_flags = {}
+    for f_ in a.flag:
+        k_, _, v_ = f_.partition("=")
+        if k_ not in RESTRICTION_FLAGS:
+            ap.error("--flag must be one of " + ", ".join(RESTRICTION_FLAGS))
+        self_flags[k_] = v_.strip().lower() not in ("no", "false", "0")
+    if self_flags.get("client_owned") and not a.ownership:
+        a.ownership = "client_owned"
+    cutoff_early = dt.datetime.strptime(a.cutoff_early, "%Y-%m-%d").replace(tzinfo=dt.timezone.utc)
     out = a.out.expanduser().resolve()
     cutoff = dt.datetime.strptime(a.cutoff, "%Y-%m-%d").replace(tzinfo=dt.timezone.utc)
-    state = out / ".state" / f"{re.sub(r'[^A-Za-z0-9._-]+', '-', a.label)}--{a.mode}.jsonl"
+    state = out / ".state" / f"{re.sub(r'[^A-Za-z0-9._-]+', '-', a.label)}--{a.mode}--{a.cutoff}--{a.cutoff_early}.jsonl"
     state.parent.mkdir(parents=True, exist_ok=True)
     if a.force and state.exists():
         state.unlink()
@@ -617,7 +754,8 @@ def main(argv=None) -> int:
         key = h(f"{unit[0]}:{unit[1]}" if isinstance(unit, tuple) else str(unit))
         if key in done:
             continue
-        data = scan_unit(unit[1], cutoff, shallow=True) if isinstance(unit, tuple) else scan_unit(unit, cutoff)
+        data = (scan_unit(unit[1], cutoff, shallow=True, cutoff_early=cutoff_early) if isinstance(unit, tuple)
+                else scan_unit(unit, cutoff, cutoff_early=cutoff_early))
         with state.open("a", encoding="utf-8") as f:
             f.write(json.dumps({"unit": key, "data": data}) + "\n")
         done[key] = data
@@ -625,6 +763,7 @@ def main(argv=None) -> int:
     merged = merge(list(done.values()))
     doc = build_doc(merged, a.label, a.tag, a.cutoff, len(roots), a.mode)
     doc["recommendation"] = recommend(doc)
+    add_studio_blocks(doc, merged, a.cutoff_early, self_flags, a.ownership)
     dm = dream_mod()
     doc["dream"] = dm.pending()
     doc["dream"] = dm.resolve(out, dm.ground_text(doc, render(doc)), a.no_dream)

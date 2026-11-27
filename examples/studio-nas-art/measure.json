@@ -2,7 +2,7 @@
   "schema": "october.measure/v1",
   "kind": "art",
   "tool": "measure-art",
-  "tool_version": "0.3.0",
+  "tool_version": "0.4.0",
   "mode": "full",
   "measured_at": "2026-11-20T10:00:00Z",
   "zip_contents": {
@@ -483,5 +483,144 @@
     "words": 80,
     "skip_reason": null,
     "basis": "Founder-style pitch written by the AI agent after the audit, grounded only in what this run inspected. It is not a measurement and changes no count."
+  },
+  "cutoff_early": "2022-11-30",
+  "cutoffs": {
+    "pre_2025": {
+      "date": "2025-01-01",
+      "count": 47100,
+      "share": 1.0,
+      "label": "estimated",
+      "unit": "creative files (modification time)"
+    },
+    "pre_chatgpt": {
+      "date": "2022-11-30",
+      "count": 44665,
+      "share": 0.948,
+      "label": "estimated",
+      "unit": "creative files (modification time)"
+    }
+  },
+  "pre_chatgpt_share": 0.948,
+  "studio_content": {
+    "audio_middleware": {
+      "wwise_projects": 1,
+      "fmod_projects": 0,
+      "sound_banks": 6
+    },
+    "localisation": {
+      "files": 17,
+      "by_format": {
+        "ink": 3,
+        "po": 14
+      }
+    },
+    "engine_content": {
+      "uasset": 0,
+      "umap": 0,
+      "unity": 877,
+      "prefab": 3950,
+      "tscn": 0
+    },
+    "template_content_files": 0,
+    "asset_store_or_marketplace_files": 310,
+    "asset_store_packages": 4,
+    "blueprints": null,
+    "blueprint_nodes": null,
+    "blueprints_label": "not_applicable",
+    "blueprints_note": "Blueprints and Blueprint nodes are counted by measure-code (count_blueprints.py) on the Unreal project",
+    "label": "verified",
+    "method": "file extensions and folder names; contents are not opened"
+  },
+  "restrictions": {
+    "ownership": "own",
+    "ownership_basis": "default (the seller owns its data)",
+    "flags": {
+      "client_owned": {
+        "value": null,
+        "label": "unknown",
+        "method": "ownership is a contract question; set --ownership or --flag client_owned"
+      },
+      "platform_nda": {
+        "value": null,
+        "label": "unknown",
+        "method": "no console-platform folder names found; not proof of absence"
+      },
+      "third_party_middleware": {
+        "value": true,
+        "label": "verified",
+        "method": "Asset Store, Marketplace or template content files found",
+        "count": 314
+      },
+      "player_personal_data": {
+        "value": null,
+        "label": "unknown",
+        "method": "creative files are not read"
+      },
+      "staff_personal_data": {
+        "value": null,
+        "label": "unknown",
+        "method": "XMP creator names are hashed, never written"
+      },
+      "secrets": {
+        "value": null,
+        "label": "unknown",
+        "method": "creative files are not scanned for secrets"
+      }
+    }
+  },
+  "labels": {
+    "totals.creative_files": {
+      "label": "verified",
+      "scope": "files under the scanned roots"
+    },
+    "totals.native_files": {
+      "label": "verified",
+      "scope": "files under the scanned roots"
+    },
+    "totals.export_files": {
+      "label": "verified",
+      "scope": "files under the scanned roots"
+    },
+    "totals.engine_asset_files": {
+      "label": "verified",
+      "scope": "files under the scanned roots"
+    },
+    "totals.creative_bytes": {
+      "label": "verified",
+      "scope": "files under the scanned roots"
+    },
+    "totals.cad_files": {
+      "label": "verified",
+      "scope": "files under the scanned roots"
+    },
+    "totals.engine_projects": {
+      "label": "verified",
+      "scope": "files under the scanned roots"
+    },
+    "totals.distinct_works": {
+      "label": "estimated",
+      "method": "native files grouped by name without version suffixes per folder"
+    },
+    "totals.duplicate_files": {
+      "label": "verified",
+      "scope": "same size and head/tail bytes"
+    },
+    "authors.distinct_creators_in_metadata": {
+      "label": "estimated",
+      "method": "XMP creators only; many files carry none"
+    },
+    "cutoffs.pre_2025": {
+      "label": "estimated",
+      "method": "file modification times, which copies can reset"
+    },
+    "cutoffs.pre_chatgpt": {
+      "label": "estimated",
+      "method": "file modification times, which copies can reset"
+    },
+    "studio_content.blueprints": {
+      "label": "not_applicable",
+      "method": "counted by measure-code on the Unreal project"
+    }
   }
 }

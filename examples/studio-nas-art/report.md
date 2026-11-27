@@ -1,6 +1,6 @@
 # Creative file measurement: studio-nas-art
 
-Measured 2026-11-20 with measure-art 0.3.0. Counts only: no file names, paths or content.
+Measured 2026-11-20 with measure-art 0.4.0. Counts only: no file names, paths or content.
 
 ## 1. Headline
 
@@ -60,6 +60,25 @@ Internal dates written by the authoring tool (STEP headers):
 - 2018: 40
 - 2019: 112
 - 2020: 60
+
+## 5b. Studio content, cutoffs and restrictions
+
+- Audio middleware: 1 Wwise and 0 FMOD project files, 6 sound banks
+- Localisation and narrative files: 17 (ink 3, po 14)
+- Engine content: uasset 0, umap 0, unity 877, prefab 3,950, tscn 0; Blueprints are counted by measure-code
+- Template content files 0; Asset Store or Marketplace files 310; .unitypackage files 4 (third-party, excluded from own work)
+- Pre-2025: 100.0%; pre-ChatGPT (before 2022-11-30): 94.8% of dated files (modification times, label estimated)
+
+Ownership: own; basis: default (the seller owns its data). Restriction flags (recorded, not ruled on):
+
+| flag | value | label | basis |
+|---|---|---|---|
+| client owned | unknown | unknown | ownership is a contract question; set --ownership or --flag client_owned |
+| platform nda | unknown | unknown | no console-platform folder names found; not proof of absence |
+| third party middleware | yes (314) | verified | Asset Store, Marketplace or template content files found |
+| player personal data | unknown | unknown | creative files are not read |
+| staff personal data | unknown | unknown | XMP creator names are hashed, never written |
+| secrets | unknown | unknown | creative files are not scanned for secrets |
 
 ## 6. Caveats
 

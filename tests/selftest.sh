@@ -94,4 +94,52 @@ dc = json.loads((w / "declined/measure.json").read_text())
 assert dc["dream"]["status"] == "skipped" and "Why this is special" not in (w / "declined/report.md").read_text()
 print("selftest: dream mode OK")
 EOF
+# v0.4: audio middleware, localisation, engine content, template and Asset Store content, both cutoffs, labels, flags.
+S="$WORK/studio"
+mkdir -p "$S/ZqAudio/WwiseProject" "$S/ZqAudio/Fmod" "$S/ZqLoc" "$S/ZqUnreal/Content/StarterContent" "$S/ZqUnreal/Content/Zq" \
+         "$S/ZqUnity/Assets/Plugins/ZqVendor" "$S/ZqUnity/ProjectSettings" "$S/ZqGodot" "$S/ZqPlat/PS5"
+printf 'x' > "$S/ZqAudio/WwiseProject/ZqGame.wproj"; printf 'x' > "$S/ZqAudio/WwiseProject/ZqSfx.wwu"
+printf 'x' > "$S/ZqAudio/WwiseProject/Init.bnk"; printf 'x' > "$S/ZqAudio/Fmod/ZqGame.fspro"; printf 'x' > "$S/ZqAudio/Fmod/Master.bank"
+printf 'msgid ""\n' > "$S/ZqLoc/fr.po"; printf '<xliff/>' > "$S/ZqLoc/de.xliff"; printf '== start\n' > "$S/ZqLoc/story.ink"
+printf 'title: x\n' > "$S/ZqLoc/dialogue.yarn"; printf 'x' > "$S/ZqLoc/zq_articy_export.json"
+printf '{}' > "$S/ZqUnreal/Zq.uproject"; printf 'x' > "$S/ZqUnreal/Content/Zq/BP_Zq.uasset"; printf 'x' > "$S/ZqUnreal/Content/Zq/Main.umap"
+printf 'x' > "$S/ZqUnreal/Content/StarterContent/M_Rock.uasset"
+printf 'm_EditorVersion: 2021.3.1f1\n' > "$S/ZqUnity/ProjectSettings/ProjectVersion.txt"
+printf 'x' > "$S/ZqUnity/Assets/Plugins/ZqVendor/icon.png"; printf 'x' > "$S/ZqUnity/Assets/Zq.prefab"; printf 'x' > "$S/ZqUnity/zqpack.unitypackage"
+printf 'x' > "$S/ZqGodot/zq.tscn"; printf 'x' > "$S/ZqPlat/PS5/zqbutton.png"
+touch -t 202101010000 "$S/ZqAudio/WwiseProject/ZqGame.wproj" "$S/ZqLoc/fr.po"
+touch -t 202306010000 "$S/ZqAudio/Fmod/ZqGame.fspro"
+"$PY" "$HERE/scripts/measure_art.py" "$S" --out "$WORK/studio-out" --label studio --no-dream 2>/dev/null
+"$PY" "$HERE/scripts/measure_art.py" "$S" --out "$WORK/studio-simple" --label studio --mode simple --no-dream \
+  --cutoff-early 2023-12-31 --flag client_owned --flag secrets=no 2>/dev/null
+if "$PY" "$HERE/scripts/measure_art.py" "$S" --out "$WORK/bad" --flag nonsense 2>/dev/null; then echo "unknown flag accepted"; exit 1; fi
+"$PY" - "$WORK" <<'PYEOF'
+import json, sys, pathlib
+w = pathlib.Path(sys.argv[1])
+d = json.loads((w / "studio-out/measure.json").read_text()); rep = (w / "studio-out/report.md").read_text()
+sc = d["studio_content"]
+assert sc["audio_middleware"] == {"wwise_projects": 1, "fmod_projects": 1, "sound_banks": 2}, sc["audio_middleware"]
+assert sc["localisation"]["files"] == 5 and sc["localisation"]["by_format"] == {"articy": 1, "ink": 1, "po": 1, "xliff": 1, "yarn": 1}, sc["localisation"]
+assert sc["engine_content"] == {"uasset": 2, "umap": 1, "unity": 0, "prefab": 1, "tscn": 1}, sc["engine_content"]
+assert sc["template_content_files"] == 1 and sc["asset_store_or_marketplace_files"] == 1 and sc["asset_store_packages"] == 1, sc
+assert sc["blueprints"] is None and sc["blueprints_label"] == "not_applicable"
+assert d["by_application"]["Wwise"]["native"] == 2 and d["by_application"]["FMOD"]["export"] == 1
+c = d["cutoffs"]
+assert c["pre_chatgpt"]["date"] == "2022-11-30" and c["pre_chatgpt"]["count"] == 1 and c["pre_2025"]["count"] == 2, c
+assert c["pre_chatgpt"]["label"] == "estimated" and d["cutoff_early"] == "2022-11-30"
+f = d["restrictions"]["flags"]
+assert d["restrictions"]["ownership"] == "own" and f["third_party_middleware"]["value"] is True and f["third_party_middleware"]["count"] == 3, f
+assert f["platform_nda"]["value"] is True and f["client_owned"]["value"] is None and f["client_owned"]["label"] == "unknown", f
+lb = d["labels"]
+assert lb["totals.creative_files"]["label"] == "verified" and lb["totals.distinct_works"]["label"] == "estimated"
+assert all(v.get("method") for v in lb.values() if v["label"] == "estimated")
+assert "## 5b. Studio content" in rep and "pre-ChatGPT" in rep and "| third party middleware | yes (3)" in rep, rep
+s = json.loads((w / "studio-simple/measure.json").read_text())
+assert s["cutoffs"]["pre_chatgpt"]["count"] == 2 and s["labels"]["totals.creative_files"]["label"] == "estimated"
+assert s["restrictions"]["ownership"] == "client_owned" and s["restrictions"]["flags"]["secrets"] == {"value": False, "label": "self_reported", "method": "stated by the seller"}
+text = (w / "studio-out/measure.json").read_text() + rep + (w / "studio-simple/measure.json").read_text()
+for leak in ("zq", "Zq", "StarterContent", "PS5", "Wwise" + "Project"):
+    assert leak not in text, leak
+print("selftest: studio content, cutoffs, labels and restrictions OK")
+PYEOF
 echo "selftest: passed"
