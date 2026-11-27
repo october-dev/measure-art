@@ -1,6 +1,6 @@
 # measure-art
 
-A Claude Code skill that counts creative and CAD files **on your own machine**: files by application, native working files versus exports, distinct works, engine projects, sizes, dates, format versions and duplicates. It never writes a file name or any content. It ends with a short, clearly labelled **"Why this is special"** pitch that Claude writes after the audit (dream mode).
+An agent skill for Claude Code, Codex, Grok, Hermes and other coding agents that counts creative and CAD files **on your own machine**: files by application, native working files versus exports, distinct works, engine projects, sizes, dates, format versions and duplicates. It never writes a file name or any content. It ends with a short, clearly labelled **"Why this is special"** pitch that the agent writes after the audit (dream mode).
 
 Part of the October measurement skills: [measure-code](https://github.com/october-dev/measure-code) · [measure-data](https://github.com/october-dev/measure-data) · **measure-art** · [master-valuate](https://github.com/october-dev/master-valuate)
 
@@ -8,22 +8,33 @@ Part of the October measurement skills: [measure-code](https://github.com/octobe
 
 Requires Python 3.9+. No pip packages.
 
-```bash
-git clone https://github.com/october-dev/measure-art ~/.claude/skills/measure-art
-```
+This is a plain agent skill: [`SKILL.md`](SKILL.md) holds the instructions and `scripts/` holds the tools, so any coding agent that can read files and run Python can use it.
+
+- **Claude Code**: clone it into your skills folder and it is picked up as the `measure-art` skill:
+  ```bash
+  git clone https://github.com/october-dev/measure-art ~/.claude/skills/measure-art
+  ```
+- **Codex**: clone it into the Codex skills folder:
+  ```bash
+  git clone https://github.com/october-dev/measure-art ~/.codex/skills/measure-art
+  ```
+  Or clone it anywhere and point Codex at `SKILL.md`. When Codex works inside the repo, it reads `AGENTS.md`, which points to `SKILL.md`.
+- **Grok, Hermes and other agents**: clone it anywhere and tell the agent: *"Read `<path>/SKILL.md` and follow it."*
+
+The commands below use `$SKILL` for the folder you cloned into, for example `SKILL=~/.claude/skills/measure-art`.
 
 ## Use
 
 **Start with simple mode** (`--mode simple`): a listing-only pass that takes minutes and says whether a full run is worth it.
 
-In Claude Code:
+In your coding agent (Claude Code, Codex, Grok, Hermes ...):
 
 > Use measure-art on /Volumes/StudioNAS/Art and ~/Projects/MyGame, label it studio-art
 
 Or run it directly:
 
 ```bash
-python3 ~/.claude/skills/measure-art/scripts/measure_art.py /Volumes/StudioNAS/Art ~/Projects/MyGame \
+python3 $SKILL/scripts/measure_art.py /Volumes/StudioNAS/Art ~/Projects/MyGame \
     --out ./measure-out/art --label studio-art --tag project:my-game
 ```
 
@@ -45,12 +56,12 @@ Format versions from headers, internal dates (STEP and XMP), XMP creators (hashe
 
 ## Dream mode: "Why this is special"
 
-Counts miss taste, ambition, complexity and polish. So after the audit, Claude re-reads the report and what it saw and writes a 4-6 sentence founder-style pitch for the collection. It is on by default; `--no-dream` (or telling Claude you don't want a pitch) skips it.
+Counts miss taste, ambition, complexity and polish. So after the audit, the agent re-reads the report and what it saw and writes a 4-6 sentence founder-style pitch for the collection. It is on by default; `--no-dream` (or telling the agent you don't want a pitch) skips it.
 
 The pitch must be grounded only in what the run saw and in the counts. `scripts/add_dream.py` validates it before inserting it: 4-6 sentences and no more than 160 words, no emails, URLs, handles, paths, file names, tokens or names you pass with `--deny`, and every number must already appear in the report. It is written to `measure.json` as `dream` and rendered as the last section of `report.md`, labelled as a pitch, so the counts stay neutral and credible. See [`examples/studio-nas-art/`](examples/studio-nas-art/) for a synthetic one.
 
 ```bash
-python3 ~/.claude/skills/measure-art/scripts/add_dream.py draft.txt --out ./measure-out/art
+python3 $SKILL/scripts/add_dream.py draft.txt --out ./measure-out/art
 ```
 
 ## Applications recognised

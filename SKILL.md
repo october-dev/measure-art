@@ -5,7 +5,7 @@ description: Count creative and CAD files locally - Figma, Blender, Unity/Unreal
 
 # measure-art
 
-Inventories creative working files **on this machine**. The script walks folders and reads a few **header bytes** per file to identify formats and versions. It never opens layers, scenes or images and never makes network calls. The output holds counts, sizes, dates and version strings, plus one-way fingerprints for dedupe.
+Inventories creative working files **on this machine**. The script walks folders and reads a few **header bytes** per file to identify formats and versions. It never opens layers, scenes or images and never makes network calls. The output holds counts, sizes, dates and version strings, plus one-way fingerprints for dedupe. `<skill-dir>` below is the folder holding this SKILL.md.
 
 ## Two modes
 
